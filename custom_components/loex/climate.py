@@ -67,3 +67,5 @@ class LoexRoom(ClimateEntity):
                 )
         except Exception as e:
             _LOGGER.error(e)
+
+        _LOGGER.info(f"Room {self._attr_name} updated")
