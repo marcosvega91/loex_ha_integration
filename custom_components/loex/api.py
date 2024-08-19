@@ -8,13 +8,12 @@ class LoexAPI:
         self.identifier = identifier
 
     async def get_rooms(self):
-        jwt = await self.authenticator.authenticate()
-
         url = f"https://xsmart.loex.it/{self.identifier}/input.json"
-
+        if not hasattr(self, "jwt"):
+            self.jwt = await self.authenticator.authenticate()
         async with aiohttp.ClientSession() as session:
             async with session.get(
-                url, headers={"Authorization": f"{jwt}"}
+                url, headers={"Authorization": f"{self.jwt}"}
             ) as response:
                 if response.status == 200:
                     data = await response.json()
