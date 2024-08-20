@@ -1,5 +1,9 @@
 import aiohttp
+from aiohttp import ClientTimeout
+import logging
 from .authenticator import Authenticator
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class LoexAPI:
@@ -11,7 +15,8 @@ class LoexAPI:
         url = f"https://xsmart.loex.it/{self.identifier}/input.json"
         if not hasattr(self, "jwt"):
             self.jwt = await self.authenticator.authenticate()
-        async with aiohttp.ClientSession() as session:
+        timeout = ClientTimeout(total=2)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.get(
                 url, headers={"Authorization": f"{self.jwt}"}
             ) as response:
@@ -58,12 +63,14 @@ class LoexAPI:
                                     "id": 20201 + 7 * index,
                                     "name": data[name_key],
                                     "type": data[type_key],
+                                    "temp_key": temp_key,
                                     "temp": round(data[temp_key] / 10, 1),
                                     "set": round(data[set_key] / 10, 1),
                                     "error": data[error_key],
                                     "output": data[output_key],
                                     "mode": data[mode_key],
                                     "humidity": round(data[humidity_key] / 10, 1),
+                                    "update_temp_key": 17621 + 10 * index,
                                     "corr": data[corr_key],
                                     "symbol": data[symbol_key],
                                     "schedule": data[schedule_key],
@@ -88,4 +95,22 @@ class LoexAPI:
                 else:
                     raise Exception(
                         f"Errore durante la richiesta delle stanze: {response.status}"
+                    )
+
+    async def set_temperature(self, id, delta_temperature):
+        url = f"https://xsmart.loex.it/{self.identifier}/output.json"
+        if not hasattr(self, "jwt"):
+            self.jwt = await self.authenticator.authenticate()
+        body = f"{id}={delta_temperature}"
+        _LOGGER.info(f"Setting temperature: {body}")
+        timeout = ClientTimeout(total=2)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.post(
+                url,
+                headers={"Authorization": f"{self.jwt}", "Content-Type": "text/plain"},
+                data=body,
+            ) as response:
+                if response.status != 200:
+                    raise Exception(
+                        f"Errore durante la richiesta di impostazione della temperatura: {response.status}"
                     )
